@@ -1,0 +1,18 @@
+========================
+Interactive Radial Chart
+========================
+
+A simple demonstration of using D3's partition layout to interactively build
+a sunburst/radial chart.
+
+You can view it in action here: http://kevindias.com/projects/radial/
+
+Bug reports or suggestions for improvement can be submitted to the Bitbucket
+repo: https://bitbucket.org/dias.kev/radial-chart-demo/
+
+The demo has been kept as a single HTML file to make it easy to download and
+run locally.
+
+Please note that the text on this chart does not work in WebKit-based browsers
+(such as Chrome) because of a selection bug.
+https://bugs.webkit.org/show_bug.cgi?id=83438.
