@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Radial Chart</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            /*width: 960px;*/
+            padding: 5px;
+        }
+        h1 {
+            font-size: 1em;
+            font-weight: normal;
+            text-decoration: underline;
+            display: none;
+            margin: 5px;
+        }
+        form {
+            margin: 5px 10px;
+            padding: 5px 0;
+        }
+        form.edit,
+        div.local-files,
+        div.download-preview {
+            margin: 5px 10px;
+            padding: 5px 0;
+            border-bottom: 1px solid #BBB;
+        }
+        input {
+            display: block;
+        }
+        ul {
+            list-style-type: none;
+            margin: 0;
+        }
+        svg {
+            font-size: 0.9em;
+        }
+        div.controls {
+            position: absolute;
+            right: 5px;
+            top: 5px;
+            width: 300px;
+        }
+    </style>
+</head>
+<body>
+<div class="controls">
+    <form class="edit" onSubmit="return newNodeSubmit()">
+        <input type="hidden" name="parent-node" value="">
+        <p><label>Change Current Name <input type="text" name="change-name" value="" disabled></label></p>
+        <p><label>New Child Name <input type="text" name="new-name" value="" disabled></label></p>
+        <input type="submit" value="Submit" disabled/>
+    </form>
+
+    <form onSubmit="return saveToLocal()">
+        <p><label>Save As <input type="text" name="save-name" value="" maxlength="20"></label></p>
+        <input type="submit" value="Save"/>
+    </form>
+    <div class="local-files">
+        <h1 id="saved-header">Saved Charts:</h1>
+        <ul id="file-list">
+        </ul>
+    </div>
+    <div class="download-preview">
+        <form onSubmit="return exportChartData()">
+            <input type="submit" value="Export"/>
+        </form>
+    </div>
+    <div class="about">
+        <p>A demonstration of the partition layout of <a href="http://d3js.org/" title="D3.js home page">D3.js</a>.</p>
+        <p>Please note that the text on this chart does not work in some WebKit-based browsers (such as Chrome) because of <a href="https://bugs.webkit.org/show_bug.cgi?id=83438" title="WebKit bug #83438">this bug</a>.</p>
+    </div>
+</div>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+
+var width = 960,
+    height = 800,
+    radius = Math.min(width, height) / 2,
+    color = d3.scale.category20();
+
+var svg = d3.select("body").append("div").append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .attr("version", "1.1")
+    .attr("xmlns", "http://www.w3.org/2000/svg")
+    // hack: doubling xmlns: so it doesn't disappear once in the DOM
+    // https://groups.google.com/forum/?fromgroups=#!topic/d3-js/Sh4ysLFBMRQ
+    .attr("xmlns:xmlns:xlink", "http://www.w3.org/1999/xlink")
+    .append("g")
+    .attr("transform", "translate(" + width / 2 + "," + height * .5 + ")");
+
+var arc = d3.svg.arc()
+    .startAngle(function(d) { return d.x; })
+    .endAngle(function(d) { return d.x + d.dx; })
+    .innerRadius(function(d) { return Math.sqrt(d.y); })
+    .outerRadius(function(d) { return Math.sqrt(d.y + d.dy); });
+
+// Arc whose outer radius is between the inner and outer
+// radii of arc() above. Used for text layout.
+var innerArc = d3.svg.arc()
+    .startAngle(function(d) { return d.x; })
+    .endAngle(function(d) { return d.x + d.dx; })
+    .innerRadius(function(d) { return Math.sqrt(d.y); })
+    .outerRadius(function(d) { return getMidRadius(d); });
+
+var partition = d3.layout.partition()
+    .sort(null)
+    .size([2 * Math.PI, radius * radius])
+    .value(function(d) { return 1; });
+
+var root = null;
+var rootNodeText, path;
+
+// Display saved charts and load if requested
+listSaved();
+if (window.location.search != "") {
+    root = loadSaved(window.location.search);
+}
+if (root === null) {
+    root = {
+        "name": "Click here to start",
+        "id": 0,
+        "children":[]
+    }
+}
+
+var nodes = partition(root);
+chartInit(nodes);
+
+function chartInit(nodes) {
+
+    path = svg.datum(root).selectAll("path")
+        .data(nodes, function(d) { return d.id; })
+        .enter();
+
+    path.append("path")
+        .attr("class", "textpath")
+        .attr("fill-opacity", 0)
+        .attr("stroke-opacity", 0)
+        .attr("d", innerArc)
+        .attr("id", function(d) { return "np"+d.id; });
+
+    path.append("path")
+        .attr("class", "nodepath")
+        .attr("d", arc)
+        .attr("stroke", "#fff")
+        .attr("fill", function(d) { return color((d.children ? d : d.parent).id); })
+        .attr("fill-rule", "evenodd")
+        .on("click", click);
+
+    rootNodeText = svg.append("text")
+        .attr("y", 7) // Vertical centre (rough)
+        .attr("text-anchor", "middle")
+        .text(function(d) { return d.name; })
+        .on("click", click);
+
+    var curveText = svg.selectAll("text").data(nodes, function(d) { return d.id; });
+    curveText.enter().append("text");
+    curveText.append("textPath")
+        .attr("xlink:href", function(d) { return "#np"+d.id; })
+        .text(function(d) { return d.depth ? d.name : ""; });
+
+    curveText.attr("transform", getTextRotation);
+    curveText.on("click", click);
+
+    // An empty textPath on the root node makes Inkscape display
+    // curve the root's text even if it isn't in the textPath
+    rootNodeText.selectAll("textPath").remove();
+}
+
+function click(d) {
+    var nodeIndex = nodes.indexOf(d);
+    d3.select("input[name=parent-node]").property("value", nodeIndex);
+    d3.select("input[name=change-name]").property("value", d.name);
+    d3.selectAll("input").attr("disabled", null);
+    d3.select("input[name=new-name]").node().focus();
+}
+
+function newNodeSubmit() {
+    var nodeIndex = d3.select("input[name=parent-node]").property("value");
+    var updatedName = d3.select("input[name=change-name]").property("value");
+    var createdName = d3.select("input[name=new-name]").property("value");
+    updateNodes(nodeIndex, createdName, updatedName);
+    d3.selectAll(".edit input").attr("disabled", "true");
+    d3.select("input[name=new-name]").property("value", "");
+    d3.select("input[name=change-name]").property("value", "");
+    return false;
+} 
+
+function updateNodes(parentNodeIndex, createdName, updatedName) {
+    var parentNode = nodes[parentNodeIndex];
+    parentNode.name = updatedName;
+    if (createdName != "") {
+        var n = {"name": createdName, "id": nodes.length};
+        if (parentNode.children) {
+            parentNode.children.push(n);
+        } else {
+            parentNode.children = [n];
+        }
+        nodes.push(n);
+    }
+    // Root node has a different text setup (it's not on a textPath)
+    rootNodeText.text(function(d) { return d.name; });
+
+    // Paths for text layout
+    var textNodes = svg.selectAll(".textpath").data(partition.nodes(root), function(d) { return d.id; });
+    textNodes.enter().append("path").attr("class", "textpath");
+    textNodes.attr("d", innerArc)
+        .attr("fill-opacity", 0)
+        .attr("stroke-opacity", 0)
+        .attr("id", function(d) { return "np"+d.id; });
+
+    // Joins new and old elements
+    var newNodes = svg.selectAll(".nodepath").data(partition.nodes(root), function(d) { return d.id; });
+    // Create new elements
+    newNodes.enter().append("path").attr("class", "nodepath");
+    // Appending to enter select expands update selection,
+    // So this applies to enter + update nodes
+    newNodes.transition()
+        .duration(500)
+        //.attrTween("d", arcTween)
+        .attr("d", arc)
+        .attr("stroke", "#fff")
+        .attr("fill", function(d) { return color((d.children ? d : d.parent).id); })
+        .attr("fill-rule", "evenodd");
+    newNodes.on("click", click);
+
+    var newText = svg.selectAll("text").data(partition.nodes(root), function(d) { return d.id; });
+    newText.enter().append("text");
+
+    newText.selectAll("textPath").remove();
+
+    newText.append("textPath")
+        .attr("xlink:href", function(d) { return "#np"+d.id; })
+        .text(function(d) { return d.depth ? d.name : ""; });
+
+    newText.attr("transform", getTextRotation);
+    newText.on("click", click);
+
+    // An empty textPath on the root node makes Inkscape display
+    // curve the root's text even if it isn't in the textPath
+    rootNodeText.selectAll("textPath").remove();
+}
+
+// Returns text rotation required to centre within node
+function getTextRotation(d) {
+    if (d.depth === 0) { return ""; } // No change for root node
+    var arcRadius = getMidRadius(d)
+
+    var textLength = this.getComputedTextLength();
+    var textTheta = textLength / arcRadius; // Angle subtended by text
+
+    var start = d.x; // Textpath start angle
+    var end = d.x + d.dx; // Textpath end angle
+    var arcAngle = Math.abs(end - start); // Angle subtended by arc
+    var mid = (arcAngle / 2);
+    var rotate = mid - (textTheta / 2); // Path midpoint accounting for text length
+    rotate = rotate * (180 / Math.PI);
+
+    return "rotate(" + rotate + ")";
+}
+// Returns a radius 1/3 of the way between the
+// inner and outer radii of the standard arc
+function getMidRadius(d) {
+    var outerRadius = Math.sqrt(d.y + d.dy); 
+    var innerRadius = Math.sqrt(d.y);
+    var diff = outerRadius - innerRadius;
+    return innerRadius + (diff / 3);
+}
+
+// Stash the old values for transition.
+function stash(d) {
+  d.x0 = d.x;
+  d.dx0 = d.dx;
+}
+
+// Interpolate the arcs in data space.
+function arcTween(a) {
+  var i = d3.interpolate({x: a.x0, dx: a.dx0}, a);
+  return function(t) {
+    var b = i(t);
+    a.x0 = b.x;
+    a.dx0 = b.dx;
+    return arc(b);
+  };
+}
+
+// Saves current chart to localStorage
+function saveToLocal() {
+    var saveAs = d3.select("input[name=save-name]").property("value");
+    var data = nodes;
+    var JSONData = JSON.stringify(data[0], ["name", "children", "id"], 2);
+    if (saveAs === "") {
+        saveAs = data[0].name;
+    }
+    localStorage.setItem(saveAs, JSONData);
+    listSaved();
+    return false;
+}
+
+// Populates list of locally saved charts
+function listSaved() {
+    d3.selectAll("#file-list li").remove(); // Clear the list
+    var names = Object.keys(localStorage);
+    var list = d3.selectAll("#file-list").append("li");
+    if (names.length > 0) {
+        d3.select("#saved-header").style("display", "block");
+    }
+    list.selectAll("li")
+        .data(names)
+        .enter()
+        .append("li").append("a")
+        .attr("href", function(d) { return "?" + encodeURIComponent(d); })
+        .text(String);
+}
+
+// Loads data from localStorage
+function loadSaved(query) {
+    var name = query.slice(1);
+    name = decodeURIComponent(name);
+    var json = localStorage.getItem(name);
+    var data = JSON.parse(json);
+    return data;
+}
+
+// Displays a preview img which can be saved
+// Used as a stopgap until Firefox supports the download attribute
+// See: http://caniuse.com/#feat=download
+function exportChartData() {
+    var svgContent = d3.select("svg")
+        .node().parentNode.innerHTML;
+
+    removePreview(); 
+    d3.select(".download-preview")
+        .append("p")
+        .html("Right-click on this preview<br> and choose Save as<br> Left click to hide<br>")
+        .on("click", removePreview)
+        .append("img")
+        .attr("height", "200px")
+        .attr("width", "200px")
+        .attr("src", "data:image/svg+xml;base64,"+ btoa(svgContent))
+        .on("click", removePreview);
+    return false;
+}
+
+// Removes any current download previews
+function removePreview() {
+    d3.select(".download-preview").selectAll("p").remove();
+}
+</script>
+</body>
+</html>
