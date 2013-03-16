@@ -6,7 +6,6 @@
     <style>
         body {
             font-family: sans-serif;
-            /*width: 960px;*/
             padding: 5px;
         }
         h1 {
@@ -336,7 +335,7 @@ function exportChartData() {
     removePreview(); 
     d3.select(".download-preview")
         .append("p")
-        .html("Right-click on this preview<br> and choose Save as<br> Left click to hide<br>")
+        .html("Right-click on this preview and choose Save as.<br> Left click to hide.")
         .on("click", removePreview)
         .append("img")
         .attr("height", "200px")
