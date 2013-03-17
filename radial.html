@@ -43,6 +43,7 @@
             width: 300px;
         }
     </style>
+    <!--[if IE]><script src="base64.js"></script><![endif]-->
 </head>
 <body>
 <div class="controls">
@@ -74,6 +75,9 @@
 </div>
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script>
+// Needed for export function in IE
+if (!window.btoa) { window.btoa = base64.encode; }
+if (!window.atob) { window.atob = base64.decode; }
 
 var width = 960,
     height = 800,

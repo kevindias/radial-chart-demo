@@ -11,7 +11,8 @@ Bug reports or suggestions for improvement can be submitted to the Bitbucket
 repo: https://bitbucket.org/dias.kev/radial-chart-demo/
 
 The demo has been kept as a single HTML file to make it easy to download and
-run locally.
+run locally if you aren't using Internet Explorer (which needs an extra script
+for the export function).
 
 Please note that the text on this chart does not work in WebKit-based browsers
 (such as Chrome) because of a selection bug.
