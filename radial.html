@@ -70,7 +70,6 @@
     </div>
     <div class="about">
         <p>A demonstration of the partition layout of <a href="http://d3js.org/" title="D3.js home page">D3.js</a>.</p>
-        <p>Please note that the text on this chart does not work in some WebKit-based browsers (such as Chrome) because of <a href="https://bugs.webkit.org/show_bug.cgi?id=83438" title="WebKit bug #83438">this bug</a>.</p>
     </div>
 </div>
 <script src="http://d3js.org/d3.v3.min.js"></script>
@@ -163,6 +162,7 @@ function chartInit(nodes) {
     var curveText = svg.selectAll("text").data(nodes, function(d) { return d.id; });
     curveText.enter().append("text");
     curveText.append("textPath")
+        .attr("class", "textcurve")
         .attr("xlink:href", function(d) { return "#np"+d.id; })
         .text(function(d) { return d.depth ? d.name : ""; });
 
@@ -171,7 +171,7 @@ function chartInit(nodes) {
 
     // An empty textPath on the root node makes Inkscape display
     // curve the root's text even if it isn't in the textPath
-    rootNodeText.selectAll("textPath").remove();
+    rootNodeText.selectAll(".textcurve").remove();
 }
 
 function click(d) {
@@ -234,9 +234,10 @@ function updateNodes(parentNodeIndex, createdName, updatedName) {
     var newText = svg.selectAll("text").data(partition.nodes(root), function(d) { return d.id; });
     newText.enter().append("text");
 
-    newText.selectAll("textPath").remove();
+    newText.selectAll(".textcurve").remove();
 
     newText.append("textPath")
+        .attr("class", "textcurve")
         .attr("xlink:href", function(d) { return "#np"+d.id; })
         .text(function(d) { return d.depth ? d.name : ""; });
 
@@ -245,7 +246,7 @@ function updateNodes(parentNodeIndex, createdName, updatedName) {
 
     // An empty textPath on the root node makes Inkscape display
     // curve the root's text even if it isn't in the textPath
-    rootNodeText.selectAll("textPath").remove();
+    rootNodeText.selectAll(".textcurve").remove();
 }
 
 // Returns text rotation required to centre within node
