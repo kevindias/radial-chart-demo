@@ -54,6 +54,11 @@
         <input type="submit" value="Submit" disabled/>
     </form>
 
+    <p>
+        View:<br>
+        <button onClick="">Radial</button> <button onClick="">Cluster</button>
+    </p>
+
     <form onSubmit="return saveToLocal()">
         <p><label>Save As <input type="text" name="save-name" value="" maxlength="20"></label></p>
         <input type="submit" value="Save"/>
@@ -69,7 +74,7 @@
         </form>
     </div>
     <div class="about">
-        <p>A demonstration of the partition layout of <a href="http://d3js.org/" title="D3.js home page">D3.js</a>.</p>
+        <p>A demonstration of the partition and cluster layouts of <a href="http://d3js.org/" title="D3.js home page">D3.js</a>.</p>
     </div>
 </div>
 <script src="http://d3js.org/d3.v3.min.js"></script>
