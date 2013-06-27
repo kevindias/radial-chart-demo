@@ -224,7 +224,6 @@ function updateNodes(parentNodeIndex, createdName, updatedName) {
     // So this applies to enter + update nodes
     newNodes.transition()
         .duration(500)
-        //.attrTween("d", arcTween)
         .attr("d", arc)
         .attr("stroke", "#fff")
         .attr("fill", function(d) { return color((d.children ? d : d.parent).id); })
@@ -273,23 +272,6 @@ function getMidRadius(d) {
     var innerRadius = Math.sqrt(d.y);
     var diff = outerRadius - innerRadius;
     return innerRadius + (diff / 3);
-}
-
-// Stash the old values for transition.
-function stash(d) {
-  d.x0 = d.x;
-  d.dx0 = d.dx;
-}
-
-// Interpolate the arcs in data space.
-function arcTween(a) {
-  var i = d3.interpolate({x: a.x0, dx: a.dx0}, a);
-  return function(t) {
-    var b = i(t);
-    a.x0 = b.x;
-    a.dx0 = b.dx;
-    return arc(b);
-  };
 }
 
 // Saves current chart to localStorage
