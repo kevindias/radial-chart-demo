@@ -114,7 +114,7 @@ var partition = d3.layout.partition()
     .value(function(d) { return 1; });
 
 var root = null;
-var rootNodeText, path;
+var path;
 
 // Display saved charts and load if requested
 listSaved();
@@ -130,47 +130,60 @@ if (root === null) {
 }
 
 var nodes = partition(root);
-chartInit(nodes);
+drawPartition(nodes);
 
-function chartInit(nodes) {
-
-    path = svg.datum(root).selectAll("path")
-        .data(nodes, function(d) { return d.id; })
+// Creates or refreshes a partition layout
+function drawPartition(nodes) {
+    svg.data(partition.nodes(root));
+    path = svg.selectAll("path")
+        .data(partition.nodes(root), function(d) { return d.id; })
         .enter();
 
-    path.append("path")
-        .attr("class", "textpath")
+    // Paths for text layout
+    var textNodes = svg.selectAll(".textpath").data(partition.nodes(root), function(d) { return d.id; });
+    textNodes.enter().append("path").attr("class", "textpath");
+    textNodes.attr("d", innerArc)
         .attr("fill-opacity", 0)
         .attr("stroke-opacity", 0)
-        .attr("d", innerArc)
         .attr("id", function(d) { return "np"+d.id; });
 
-    path.append("path")
-        .attr("class", "nodepath")
+    // Joins new and old elements
+    var newNodes = svg.selectAll(".nodepath").data(partition.nodes(root), function(d) { return d.id; });
+    // Create new elements
+    newNodes.enter().append("path").attr("class", "nodepath");
+    // Appending to enter select expands update selection,
+    // So this applies to enter + update nodes
+    newNodes.transition()
+        .duration(500)
         .attr("d", arc)
         .attr("stroke", "#fff")
         .attr("fill", function(d) { return color((d.children ? d : d.parent).id); })
-        .attr("fill-rule", "evenodd")
-        .on("click", click);
+        .attr("fill-rule", "evenodd");
+    newNodes.on("click", click);
 
-    rootNodeText = svg.append("text")
+    svg.selectAll("#root-text").remove(); //Find better way of adding root text node once only
+    var rootNodeText = svg.append("text")
+        .attr("id", "root-text")
         .attr("y", 7) // Vertical centre (rough)
         .attr("text-anchor", "middle")
         .text(function(d) { return d.name; })
         .on("click", click);
 
-    var curveText = svg.selectAll("text").data(nodes, function(d) { return d.id; });
-    curveText.enter().append("text");
-    curveText.append("textPath")
+    var newText = svg.selectAll("text").data(partition.nodes(root), function(d) { return d.id; });
+    newText.enter().append("text");
+
+    newText.selectAll(".textcurve").remove();
+
+    newText.append("textPath")
         .attr("class", "textcurve")
         .attr("xlink:href", function(d) { return "#np"+d.id; })
         .text(function(d) { return d.depth ? d.name : ""; });
 
-    curveText.attr("transform", getTextRotation);
-    curveText.on("click", click);
+    newText.attr("transform", getTextRotation);
+    newText.on("click", click);
 
     // An empty textPath on the root node makes Inkscape display
-    // curve the root's text even if it isn't in the textPath
+    // the root's text on a curve even if it isn't in the textPath
     rootNodeText.selectAll(".textcurve").remove();
 }
 
@@ -205,47 +218,7 @@ function updateNodes(parentNodeIndex, createdName, updatedName) {
         }
         nodes.push(n);
     }
-    // Root node has a different text setup (it's not on a textPath)
-    rootNodeText.text(function(d) { return d.name; });
-
-    // Paths for text layout
-    var textNodes = svg.selectAll(".textpath").data(partition.nodes(root), function(d) { return d.id; });
-    textNodes.enter().append("path").attr("class", "textpath");
-    textNodes.attr("d", innerArc)
-        .attr("fill-opacity", 0)
-        .attr("stroke-opacity", 0)
-        .attr("id", function(d) { return "np"+d.id; });
-
-    // Joins new and old elements
-    var newNodes = svg.selectAll(".nodepath").data(partition.nodes(root), function(d) { return d.id; });
-    // Create new elements
-    newNodes.enter().append("path").attr("class", "nodepath");
-    // Appending to enter select expands update selection,
-    // So this applies to enter + update nodes
-    newNodes.transition()
-        .duration(500)
-        .attr("d", arc)
-        .attr("stroke", "#fff")
-        .attr("fill", function(d) { return color((d.children ? d : d.parent).id); })
-        .attr("fill-rule", "evenodd");
-    newNodes.on("click", click);
-
-    var newText = svg.selectAll("text").data(partition.nodes(root), function(d) { return d.id; });
-    newText.enter().append("text");
-
-    newText.selectAll(".textcurve").remove();
-
-    newText.append("textPath")
-        .attr("class", "textcurve")
-        .attr("xlink:href", function(d) { return "#np"+d.id; })
-        .text(function(d) { return d.depth ? d.name : ""; });
-
-    newText.attr("transform", getTextRotation);
-    newText.on("click", click);
-
-    // An empty textPath on the root node makes Inkscape display
-    // curve the root's text even if it isn't in the textPath
-    rootNodeText.selectAll(".textcurve").remove();
+    drawPartition(nodes);
 }
 
 // Returns text rotation required to centre within node
