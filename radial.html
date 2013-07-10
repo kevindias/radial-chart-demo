@@ -116,6 +116,9 @@ var partition = d3.layout.partition()
 var root = null;
 var path;
 
+window.URL = window.URL || window.webkitURL;
+var downloadAttrSupported = ("download" in document.createElement("a"));
+
 // Display saved charts and load if requested
 listSaved();
 if (window.location.search != "") {
@@ -285,23 +288,32 @@ function loadSaved(query) {
     return data;
 }
 
-// Displays a preview img which can be saved
-// Used as a stopgap until Firefox supports the download attribute
+// Provides a link to download the current chart for modern browsers,
+// or a preview image which can be saved for older browsers
 // See: http://caniuse.com/#feat=download
+// And: http://caniuse.com/#feat=bloburls
 function exportChartData() {
     var svgContent = d3.select("svg")
         .node().parentNode.innerHTML;
 
     removePreview(); 
-    d3.select(".download-preview")
-        .append("p")
-        .html("Right-click on this preview and choose Save as.<br> Left click to hide.")
-        .on("click", removePreview)
-        .append("img")
-        .attr("height", "200px")
-        .attr("width", "200px")
-        .attr("src", "data:image/svg+xml;base64," + utf8_to_b64(svgContent))
-        .on("click", removePreview);
+    var previewDiv = d3.select(".download-preview");
+    previewDiv.on("click", removePreview);
+    if (window.URL && downloadAttrSupported) {
+        var fileBlob = new Blob([svgContent], {"type": "image\/svg+xml"});
+        previewDiv.append("p")
+            .append("a")
+            .html("Click here to download")
+            .attr("download", "radial_chart.svg")
+            .attr("href", window.URL.createObjectURL(fileBlob));
+    } else {
+        previewDiv.append("p")
+            .html("Right-click on this preview and choose Save as.<br> Left click to hide.")
+            .append("img")
+            .attr("height", "200px")
+            .attr("width", "200px")
+            .attr("src", "data:image/svg+xml;base64," + utf8_to_b64(svgContent));
+    }
     return false;
 }
 
