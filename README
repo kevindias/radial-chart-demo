@@ -13,3 +13,19 @@ repo: https://bitbucket.org/dias.kev/radial-chart-demo/
 The demo has been kept as a single HTML file to make it easy to download and
 run locally if you aren't using Internet Explorer (which needs an extra script
 for the export function).
+
+Browser Notes
+-------------
+
+Firefox, Chrome, and Opera support all of the features used by the demo.
+
+Safari should work, although it doesn't support the download attribute on
+anchor elements so chart export is a bit clunky.
+
+Internet Explorer 9+ mostly works, but SVG support isn't good enough for easy
+chart export. The download preview image isn't scaled down properly and the
+image mimetype isn't recognised so you have to change the filetype to SVG after
+downloading.
+
+Webkit browsers running on Windows do terrible things to text laid out on
+curved paths. It works, but it isn't pretty.
