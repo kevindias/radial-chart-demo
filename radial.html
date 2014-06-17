@@ -161,7 +161,7 @@ function drawPartition(nodes) {
         .duration(500)
         .attr("d", arc)
         .attr("stroke", "#fff")
-        .attr("fill", function(d) { return color((d.children ? d : d.parent).id); })
+        .attr("fill", function(d) { return color((typeof d.parent === "undefined" || d.children ? d : d.parent).id); })
         .attr("fill-rule", "evenodd");
     newNodes.on("click", click);
 
